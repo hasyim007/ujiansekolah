@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Admin — Sistem Ujian Sekolah</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    fontFamily: { sans: ['Plus Jakarta Sans','ui-sans-serif','system-ui'] },
+    colors: { accent: { 300:'#5fe0c5', 500:'#0ea5a4', 600:'#0c8584' } }
+  }}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="api.js"></script>
+<script src="//unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;}
+  .glass{ background:rgba(255,255,255,.65); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,.45); }
+</style>
+</head>
+<body class="min-h-screen bg-slate-50" x-data="dashboard()" x-init="init()">
+
+  <div class="pointer-events-none fixed inset-0 overflow-hidden">
+    <div class="absolute -top-40 -left-32 w-[30rem] h-[30rem] bg-accent-300/15 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative flex">
+    <aside class="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 glass border-r border-white/40 p-5">
+      <div class="flex items-center gap-2 mb-8">
+        <div class="w-9 h-9 rounded-xl bg-accent-500 flex items-center justify-center"><i data-lucide="graduation-cap" class="w-5 h-5 text-white"></i></div>
+        <div><p class="font-bold text-slate-900 leading-tight text-sm">Sistem Ujian<br>Sekolah</p></div>
+      </div>
+      <nav class="space-y-1 text-sm">
+        <a href="admin-dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-accent-500/10 text-accent-700 font-semibold"><i data-lucide="layout-dashboard" class="w-4 h-4"></i>Dashboard</a>
+        <a href="admin-bank-soal.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-white/70 transition"><i data-lucide="book-marked" class="w-4 h-4"></i>Bank Soal</a>
+        <a href="admin-kelola-sesi.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-white/70 transition"><i data-lucide="calendar-clock" class="w-4 h-4"></i>Sesi Ujian</a>
+        <a href="admin-kelola-peserta.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-white/70 transition"><i data-lucide="users" class="w-4 h-4"></i>Peserta</a>
+        <a href="admin-hasil-penilaian.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-white/70 transition"><i data-lucide="award" class="w-4 h-4"></i>Hasil & Penilaian</a>
+        <a href="admin-pengaturan.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-white/70 transition"><i data-lucide="settings" class="w-4 h-4"></i>Pengaturan</a>
+      </nav>
+      <div class="mt-auto pt-4 border-t border-slate-200">
+        <a href="login-admin.html" @click.prevent="DB.adminLogout().finally(() => window.location.href='login-admin.html')" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-white/70 transition text-sm"><i data-lucide="log-out" class="w-4 h-4"></i>Keluar</a>
+      </div>
+    </aside>
+
+    <div class="flex-1 min-w-0">
+      <header class="sticky top-0 z-20 glass border-b border-white/40">
+        <div class="px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <div><h1 class="font-bold text-slate-900 text-lg">Dashboard Admin</h1><p class="text-xs text-slate-500">Ringkasan & monitoring ujian</p></div>
+          <select x-model="sesiId" @change="muat()" class="h-9 text-sm border border-slate-200 rounded-lg px-2 bg-white/80">
+            <template x-for="s in sesiList" :key="s.id"><option :value="s.id" x-text="s.nama"></option></template>
+          </select>
+        </div>
+      </header>
+
+      <main class="p-4 sm:p-6 space-y-6">
+        <template x-if="errorFatal">
+          <div class="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 flex items-center gap-2"><i data-lucide="wifi-off" class="w-4 h-4"></i><span x-text="errorFatal"></span></div>
+        </template>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="glass rounded-2xl shadow-lg shadow-slate-900/5 p-5"><i data-lucide="calendar-check" class="w-5 h-5 text-accent-600 mb-2"></i><p class="text-2xl font-extrabold text-slate-900" x-text="kpi.sesiAktif"></p><p class="text-xs text-slate-500">Sesi Berlangsung</p></div>
+          <div class="glass rounded-2xl shadow-lg shadow-slate-900/5 p-5"><i data-lucide="users" class="w-5 h-5 text-accent-600 mb-2"></i><p class="text-2xl font-extrabold text-slate-900" x-text="kpi.totalPeserta"></p><p class="text-xs text-slate-500">Peserta di Sesi Ini</p></div>
+          <div class="glass rounded-2xl shadow-lg shadow-slate-900/5 p-5"><i data-lucide="pencil-line" class="w-5 h-5 text-accent-600 mb-2"></i><p class="text-2xl font-extrabold text-slate-900" x-text="kpi.mengerjakan"></p><p class="text-xs text-slate-500">Sedang Mengerjakan</p></div>
+          <div class="glass rounded-2xl shadow-lg shadow-slate-900/5 p-5"><i data-lucide="check-circle-2" class="w-5 h-5 text-accent-600 mb-2"></i><p class="text-2xl font-extrabold text-slate-900" x-text="kpi.selesai"></p><p class="text-xs text-slate-500">Sudah Submit</p></div>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+          <div class="glass rounded-2xl shadow-lg shadow-slate-900/5 p-5">
+            <p class="text-sm font-semibold text-slate-700 mb-3">Distribusi Status Peserta</p>
+            <canvas id="chartStatus" height="220"></canvas>
+          </div>
+
+          <div class="lg:col-span-2 rounded-2xl shadow-lg shadow-slate-900/10 p-6 bg-slate-900 text-white relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-accent-500/30 rounded-full blur-3xl"></div>
+            <div class="relative flex items-center justify-between mb-4">
+              <p class="text-sm font-semibold text-slate-300 flex items-center gap-2"><i data-lucide="shield-check" class="w-4 h-4 text-accent-400"></i>Token Sesi Aktif — <span x-text="sesiSekarang?.nama"></span></p>
+              <button @click="generateUlangToken()" class="text-xs px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition flex items-center gap-1"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>Generate Ulang</button>
+            </div>
+            <div class="relative flex flex-col sm:flex-row items-center justify-between gap-6">
+              <p class="text-6xl sm:text-7xl font-extrabold tracking-widest tabular-nums text-accent-300" x-text="sesiSekarang?.token || '------'"></p>
+              <div class="text-center sm:text-right">
+                <p class="text-xs text-slate-400">Berganti dalam</p>
+                <p class="text-3xl font-bold tabular-nums" x-text="formatCountdown(countdown)"></p>
+                <p class="text-xs text-slate-500 mt-1">Interval rotasi: <span x-text="sesiSekarang?.intervalToken || 15"></span> menit</p>
+              </div>
+            </div>
+            <p class="relative text-xs text-slate-400 mt-4">Bacakan / tampilkan token ini ke seluruh ruang ujian via proyektor.</p>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl shadow-lg shadow-slate-900/5 p-5">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-sm font-semibold text-slate-700 flex items-center gap-2"><i data-lucide="activity" class="w-4 h-4 text-accent-600"></i>Monitoring Live — <span x-text="sesiSekarang?.nama"></span></p>
+            <span class="text-xs text-slate-400">Auto-refresh 5 detik</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm min-w-[500px]">
+              <thead class="text-slate-500 text-xs uppercase tracking-wide"><tr><th class="text-left py-2 font-semibold">Peserta</th><th class="text-left py-2 font-semibold">Status</th><th class="text-left py-2 font-semibold">Nilai</th></tr></thead>
+              <tbody>
+                <template x-for="m in monitoring()" :key="m.id">
+                  <tr class="border-t border-slate-100">
+                    <td class="py-2.5 text-slate-800" x-text="m.nama"></td>
+                    <td class="py-2.5"><span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="m.status==='Selesai' ? 'bg-slate-100 text-slate-600' : m.status==='Belum Mulai' ? 'bg-amber-50 text-amber-600' : 'bg-accent-500/10 text-accent-700'" x-text="m.status"></span></td>
+                    <td class="py-2.5 text-slate-600" x-text="m.nilai ?? '-'"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+<script>
+function dashboard(){
+  return {
+    sesiList: [], sesiId: '', roster: [], hasilList: [], countdown: 0, chart:null, errorFatal:'',
+    async init(){
+      lucide.createIcons();
+      try{
+        this.sesiList = await DB.getSesi();
+        this.sesiId = (this.sesiList.find(s=>s.status==='Berlangsung') || this.sesiList[0] || {}).id || '';
+        await this.muat();
+      }catch(e){ this.errorFatal = 'Tidak bisa memuat data dari server. Periksa koneksi & konfigurasi D1.'; }
+      setInterval(()=>{ if(this.countdown>0) this.countdown--; }, 1000);
+      setInterval(()=> this.muat(), 5000);
+    },
+    async muat(){
+      if(!this.sesiId) return;
+      try{
+        this.roster = await DB.getPesertaRoster();
+        this.hasilList = await DB.getHasil(this.sesiId);
+      }catch(e){ return; }
+      const s = this.sesiSekarang;
+      if(s){ this.countdown = Math.max(0, Math.round(((s.tokenSetAt + s.intervalToken*60000) - Date.now())/1000)); }
+      this.renderChart();
+    },
+    get sesiSekarang(){ return this.sesiList.find(s=>s.id===this.sesiId); },
+    get kpi(){
+      const sesi = this.sesiSekarang;
+      const roster = sesi ? this.roster.filter(p=>sesi.kelas.includes(p.kelas)) : [];
+      const selesai = this.hasilList.filter(h=>h.status==='Selesai').length;
+      const mengerjakan = this.hasilList.filter(h=>h.status==='Sedang Mengerjakan').length;
+      return { sesiAktif: this.sesiList.filter(s=>s.status==='Berlangsung').length, totalPeserta: roster.length, mengerjakan, selesai };
+    },
+    monitoring(){
+      const sesi = this.sesiSekarang;
+      if(!sesi) return [];
+      return this.roster.filter(p=>sesi.kelas.includes(p.kelas)).map(p=>{
+        const h = this.hasilList.find(x=>x.pesertaId===p.id);
+        return { id:p.id, nama:p.nama, status: h ? h.status : 'Belum Mulai', nilai: h ? h.nilai : null };
+      });
+    },
+    formatCountdown(s){ const m=Math.floor(s/60), sec=s%60; return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; },
+    async generateUlangToken(){ if(!this.sesiSekarang) return; try{ await DB.regenToken(this.sesiSekarang.id); this.sesiList = await DB.getSesi(); await this.muat(); }catch(e){} },
+    renderChart(){
+      const k = this.kpi;
+      const belum = Math.max(0, k.totalPeserta - k.selesai - k.mengerjakan);
+      const ctx = document.getElementById('chartStatus');
+      if(!ctx) return;
+      if(this.chart) this.chart.destroy();
+      this.chart = new Chart(ctx, {
+        type:'doughnut',
+        data:{ labels:['Sudah Selesai','Sedang Mengerjakan','Belum Mulai'], datasets:[{ data:[k.selesai, k.mengerjakan, belum], backgroundColor:['#0ea5a4','#5fe0c5','#cbd5e1'], borderWidth:0 }] },
+        options:{ plugins:{ legend:{ position:'bottom', labels:{ boxWidth:10, font:{ family:'Plus Jakarta Sans', size:11 } } } }, cutout:'65%' }
+      });
+    }
+  }
+}
+</script>
+</body>
+</html>

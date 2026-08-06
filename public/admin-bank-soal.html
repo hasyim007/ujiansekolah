@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bank Soal — Admin Sistem Ujian Sekolah</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    fontFamily: { sans: ['Plus Jakarta Sans','ui-sans-serif','system-ui'] },
+    colors: { accent: { 300:'#5fe0c5', 500:'#0ea5a4', 600:'#0c8584' } }
+  }}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="api.js"></script>
+<script src="//unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;}
+  .glass{ background:rgba(255,255,255,.65); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,.45); }
+</style>
+</head>
+<body class="min-h-screen bg-slate-50" x-data="bankSoal()" x-init="init()">
+
+  <div class="pointer-events-none fixed inset-0 overflow-hidden">
+    <div class="absolute -top-40 -left-32 w-[30rem] h-[30rem] bg-accent-300/15 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative flex">
+    <aside class="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 glass border-r border-white/40 p-5">
+      <div class="flex items-center gap-2 mb-8">
+        <div class="w-9 h-9 rounded-xl bg-accent-500 flex items-center justify-center"><i data-lucide="graduation-cap" class="w-5 h-5 text-white"></i></div>
+        <div><p class="font-bold text-slate-900 leading-tight text-sm">Sistem Ujian<br>Sekolah</p></div>
+      </div>
+      <nav class="space-y-1 text-sm">
+        <a href="admin-dashboard.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-white/70 transition"><i data-lucide="layout-dashboard" class="w-4 h-4"></i>Dashboard</a>
+        <a href="admin-bank-soal.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-accent-500/10 text-accent-700 font-semibold"><i data-lucide="book-marked" class="w-4 h-4"></i>Bank Soal</a>
+        <a href="admin-kelola-sesi.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-white/70 transition"><i data-lucide="calendar-clock" class="w-4 h-4"></i>Sesi Ujian</a>
+        <a href="admin-kelola-peserta.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-white/70 transition"><i data-lucide="users" class="w-4 h-4"></i>Peserta</a>
+        <a href="admin-hasil-penilaian.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-white/70 transition"><i data-lucide="award" class="w-4 h-4"></i>Hasil & Penilaian</a>
+        <a href="admin-pengaturan.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-white/70 transition"><i data-lucide="settings" class="w-4 h-4"></i>Pengaturan</a>
+      </nav>
+      <div class="mt-auto pt-4 border-t border-slate-200">
+        <a href="login-admin.html" @click.prevent="DB.adminLogout().finally(() => window.location.href='login-admin.html')" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 hover:bg-white/70 transition text-sm"><i data-lucide="log-out" class="w-4 h-4"></i>Keluar</a>
+      </div>
+    </aside>
+
+    <div class="flex-1 min-w-0">
+      <header class="sticky top-0 z-20 glass border-b border-white/40">
+        <div class="px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          <div><h1 class="font-bold text-slate-900 text-lg">Bank Soal</h1><p class="text-xs text-slate-500">Kelola soal ujian per mata pelajaran</p></div>
+          <div class="w-9 h-9 rounded-full bg-accent-500/15 flex items-center justify-center"><i data-lucide="user" class="w-4 h-4 text-accent-600"></i></div>
+        </div>
+      </header>
+
+      <main class="p-4 sm:p-6 space-y-5">
+        <template x-if="errorFatal">
+          <div class="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 flex items-center gap-2"><i data-lucide="wifi-off" class="w-4 h-4"></i><span x-text="errorFatal"></span></div>
+        </template>
+
+        <div class="glass rounded-2xl shadow-lg shadow-slate-900/5 p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <div class="flex flex-1 flex-col sm:flex-row gap-3">
+            <div class="relative flex-1 max-w-sm">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input x-model="q" type="text" placeholder="Cari teks soal..." class="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-white/80 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+            </div>
+            <select x-model="filterMapel" class="h-10 rounded-xl border border-slate-200 bg-white/80 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+              <option value="">Semua Mapel</option><option>Matematika</option><option>Bahasa Indonesia</option><option>IPA</option>
+            </select>
+            <select x-model="filterTingkat" class="h-10 rounded-xl border border-slate-200 bg-white/80 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+              <option value="">Semua Tingkat</option><option>Mudah</option><option>Sedang</option><option>Sulit</option>
+            </select>
+          </div>
+          <button @click="bukaTambah()" class="h-10 px-4 rounded-xl bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold flex items-center gap-1.5 transition shrink-0"><i data-lucide="plus" class="w-4 h-4"></i>Tambah Soal</button>
+        </div>
+
+        <div class="hidden md:block glass rounded-2xl shadow-lg shadow-slate-900/5 overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-white/50 text-slate-500 text-xs uppercase tracking-wide">
+              <tr><th class="text-left px-5 py-3 font-semibold">Soal</th><th class="text-left px-5 py-3 font-semibold">Mapel</th><th class="text-left px-5 py-3 font-semibold">Tingkat</th><th class="text-left px-5 py-3 font-semibold">Bobot</th><th class="text-right px-5 py-3 font-semibold">Aksi</th></tr>
+            </thead>
+            <tbody>
+              <template x-for="s in filtered()" :key="s.id">
+                <tr class="border-t border-slate-100 hover:bg-white/60 transition">
+                  <td class="px-5 py-3.5 max-w-md truncate text-slate-700" x-text="s.teks"></td>
+                  <td class="px-5 py-3.5 text-slate-600" x-text="s.mapel"></td>
+                  <td class="px-5 py-3.5"><span class="px-2 py-0.5 rounded-full text-xs font-medium" :class="tingkatClass(s.tingkat)" x-text="s.tingkat"></span></td>
+                  <td class="px-5 py-3.5 text-slate-600" x-text="s.bobot"></td>
+                  <td class="px-5 py-3.5 text-right">
+                    <button @click="edit(s)" class="w-8 h-8 rounded-lg hover:bg-slate-100 inline-flex items-center justify-center"><i data-lucide="pencil" class="w-4 h-4 text-slate-500"></i></button>
+                    <button @click="hapus(s)" class="w-8 h-8 rounded-lg hover:bg-red-50 inline-flex items-center justify-center"><i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i></button>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="!loading && filtered().length===0"><td colspan="5" class="px-5 py-8 text-center text-slate-400 text-sm">Belum ada soal yang cocok.</td></tr>
+              <tr x-show="loading"><td colspan="5" class="px-5 py-8 text-center text-slate-400 text-sm"><i data-lucide="loader-2" class="w-5 h-5 animate-spin inline"></i></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="md:hidden space-y-3">
+          <template x-for="s in filtered()" :key="s.id">
+            <div class="glass rounded-2xl shadow-lg shadow-slate-900/5 p-4 space-y-2">
+              <p class="text-sm text-slate-700 line-clamp-2" x-text="s.teks"></p>
+              <div class="flex items-center justify-between text-xs text-slate-500">
+                <span x-text="s.mapel"></span><span class="px-2 py-0.5 rounded-full font-medium" :class="tingkatClass(s.tingkat)" x-text="s.tingkat"></span>
+              </div>
+              <div class="flex justify-end gap-2 pt-1">
+                <button @click="edit(s)" class="w-8 h-8 rounded-lg hover:bg-slate-100 inline-flex items-center justify-center"><i data-lucide="pencil" class="w-4 h-4 text-slate-500"></i></button>
+                <button @click="hapus(s)" class="w-8 h-8 rounded-lg hover:bg-red-50 inline-flex items-center justify-center"><i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i></button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div x-show="modalOpen" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40" style="display:none">
+    <div class="glass rounded-2xl shadow-lg shadow-slate-900/10 max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto" @click.outside="modalOpen=false">
+      <h3 class="text-lg font-bold text-slate-900" x-text="editing ? 'Edit Soal' : 'Tambah Soal'"></h3>
+      <div class="space-y-1.5">
+        <label class="text-sm font-medium text-slate-700">Teks Soal</label>
+        <textarea x-model="form.teks" rows="3" class="w-full rounded-xl border border-slate-200 bg-white/80 p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1.5"><label class="text-sm font-medium text-slate-700">Mapel</label>
+          <select x-model="form.mapel" class="w-full h-10 rounded-xl border border-slate-200 bg-white/80 px-3 text-sm"><option>Matematika</option><option>Bahasa Indonesia</option><option>IPA</option></select></div>
+        <div class="space-y-1.5"><label class="text-sm font-medium text-slate-700">Tingkat Kesulitan</label>
+          <select x-model="form.tingkat" class="w-full h-10 rounded-xl border border-slate-200 bg-white/80 px-3 text-sm"><option>Mudah</option><option>Sedang</option><option>Sulit</option></select></div>
+        <div class="space-y-1.5 col-span-2"><label class="text-sm font-medium text-slate-700">Bobot Nilai</label>
+          <input x-model.number="form.bobot" type="number" class="w-full h-10 rounded-xl border border-slate-200 bg-white/80 px-3 text-sm"></div>
+      </div>
+      <div class="space-y-2">
+        <label class="text-sm font-medium text-slate-700">Pilihan Jawaban (A-D) & Kunci Benar</label>
+        <template x-for="(p, i) in form.pilihan" :key="i">
+          <div class="flex items-center gap-2">
+            <span class="w-6 text-sm font-semibold text-slate-500" x-text="String.fromCharCode(65+i)"></span>
+            <input x-model="form.pilihan[i]" class="flex-1 h-9 rounded-lg border border-slate-200 bg-white/80 px-3 text-sm">
+            <label class="flex items-center gap-1 text-xs text-slate-500"><input type="radio" name="kunci" :checked="form.kunci[0]===i" @change="form.kunci=[i]" class="w-4 h-4 text-accent-500">Kunci</label>
+          </div>
+        </template>
+      </div>
+      <template x-if="errorModal"><p class="text-sm text-red-600" x-text="errorModal"></p></template>
+      <div class="flex gap-3 pt-2">
+        <button @click="modalOpen=false" class="flex-1 h-11 rounded-xl border border-slate-200 bg-white/70 text-slate-600 font-medium hover:bg-white transition">Batal</button>
+        <button @click="simpan()" :disabled="menyimpan" class="flex-1 h-11 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:bg-slate-300 text-white font-semibold transition">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="modalHapus" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40" style="display:none">
+    <div class="glass rounded-2xl shadow-lg shadow-slate-900/10 max-w-sm w-full p-6 space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">Hapus soal ini?</h3>
+      <p class="text-sm text-slate-600">Tindakan ini tidak dapat dibatalkan.</p>
+      <div class="flex gap-3">
+        <button @click="modalHapus=false" class="flex-1 h-11 rounded-xl border border-slate-200 bg-white/70 text-slate-600 font-medium hover:bg-white transition">Batal</button>
+        <button @click="konfirmasiHapus()" class="flex-1 h-11 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold transition">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+function bankSoal(){
+  return {
+    q:'', filterMapel:'', filterTingkat:'', loading:true, errorFatal:'', errorModal:'', menyimpan:false,
+    modalOpen:false, modalHapus:false, editing:null, toDelete:null,
+    form: { teks:'', mapel:'Matematika', tingkat:'Sedang', bobot:10, pilihan:['','','',''], kunci:[0] },
+    data: [],
+    async init(){
+      lucide.createIcons();
+      this.$watch('modalOpen', ()=>this.$nextTick(()=>lucide.createIcons()));
+      this.$watch('modalHapus', ()=>this.$nextTick(()=>lucide.createIcons()));
+      await this.muat();
+    },
+    async muat(){
+      this.loading = true;
+      try{ this.data = await DB.getSoal(); }
+      catch(e){ this.errorFatal = 'Tidak bisa memuat data dari server. Periksa koneksi & konfigurasi D1.'; }
+      this.loading = false;
+    },
+    filtered(){
+      return this.data.filter(s =>
+        (!this.q || s.teks.toLowerCase().includes(this.q.toLowerCase())) &&
+        (!this.filterMapel || s.mapel===this.filterMapel) &&
+        (!this.filterTingkat || s.tingkat===this.filterTingkat)
+      );
+    },
+    tingkatClass(t){ return t==='Mudah' ? 'bg-accent-500/10 text-accent-700' : t==='Sedang' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'; },
+    bukaTambah(){ this.editing=null; this.errorModal=''; this.form={teks:'',mapel:'Matematika',tingkat:'Sedang',bobot:10,pilihan:['','','',''],kunci:[0]}; this.modalOpen=true; },
+    edit(s){ this.editing=s; this.errorModal=''; this.form={ teks:s.teks, mapel:s.mapel, tingkat:s.tingkat, bobot:s.bobot, pilihan:[...(s.pilihan||['','','',''])], kunci:[...(s.kunci||[0])] }; this.modalOpen=true; },
+    async simpan(){
+      if(!this.form.teks.trim()){ this.errorModal = 'Teks soal wajib diisi.'; return; }
+      this.menyimpan = true;
+      try{
+        if(this.editing){ await DB.updateSoal(this.editing.id, {...this.form}); }
+        else { await DB.addSoal({...this.form}); }
+        await this.muat();
+        this.modalOpen=false;
+      }catch(e){ this.errorModal = e.message || 'Gagal menyimpan.'; }
+      this.menyimpan = false;
+    },
+    hapus(s){ this.toDelete=s; this.modalHapus=true; },
+    async konfirmasiHapus(){
+      try{ await DB.deleteSoal(this.toDelete.id); await this.muat(); }catch(e){ /* diam-diam, data tetap tampil lama */ }
+      this.modalHapus=false;
+    }
+  }
+}
+</script>
+</body>
+</html>

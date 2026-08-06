@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login Admin — Sistem Ujian Sekolah</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    fontFamily: { sans: ['Plus Jakarta Sans','ui-sans-serif','system-ui'] },
+    colors: { accent: { 300:'#5fe0c5', 500:'#0ea5a4', 600:'#0c8584' } }
+  }}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="api.js"></script>
+<script src="//unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;}
+  .glass{ background:rgba(255,255,255,.6); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,.4); }
+</style>
+</head>
+<body class="min-h-screen bg-slate-50 relative overflow-x-hidden" x-data="loginAdmin()" x-init="init()">
+
+  <div class="pointer-events-none fixed inset-0 overflow-hidden">
+    <div class="absolute -top-40 -left-32 w-[30rem] h-[30rem] bg-accent-300/15 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 -right-32 w-[30rem] h-[30rem] bg-accent-500/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-sm">
+      <div class="flex flex-col items-center mb-6">
+        <div class="w-12 h-12 rounded-2xl bg-accent-500 flex items-center justify-center mb-3 shadow-lg shadow-accent-500/20">
+          <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+        </div>
+        <h1 class="font-bold text-slate-900 text-xl">Login Admin</h1>
+        <p class="text-sm text-slate-500 mt-1">Sistem Ujian Sekolah</p>
+      </div>
+
+      <form @submit.prevent="submit" class="glass rounded-2xl shadow-lg shadow-slate-900/5 p-6 space-y-4">
+        <template x-if="errorMsg">
+          <div class="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i><span x-text="errorMsg"></span>
+          </div>
+        </template>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600 mb-1 block">Username</label>
+          <input x-model="form.username" type="text" autocomplete="username" required
+            class="w-full h-11 rounded-xl border border-slate-200 px-3 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-accent-500/40">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600 mb-1 block">Password</label>
+          <input x-model="form.password" type="password" autocomplete="current-password" required
+            class="w-full h-11 rounded-xl border border-slate-200 px-3 text-sm bg-white/80 focus:outline-none focus:ring-2 focus:ring-accent-500/40">
+        </div>
+
+        <button type="submit" :disabled="loading"
+          class="w-full h-11 rounded-xl bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold flex items-center justify-center gap-2 transition disabled:opacity-60">
+          <span x-show="!loading">Masuk</span>
+          <span x-show="loading">Memproses...</span>
+        </button>
+      </form>
+
+      <p class="text-center text-xs text-slate-400 mt-5">
+        <a href="login-peserta.html" class="hover:text-slate-600 transition">Login sebagai peserta →</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    function loginAdmin(){
+      return {
+        form: { username: '', password: '' },
+        loading: false,
+        errorMsg: '',
+        init(){ lucide.createIcons(); },
+        async submit(){
+          this.errorMsg = '';
+          this.loading = true;
+          try{
+            await DB.adminLogin(this.form.username, this.form.password);
+            window.location.href = 'admin-dashboard.html';
+          }catch(e){
+            this.errorMsg = e.message || 'Login gagal, coba lagi.';
+          }finally{
+            this.loading = false;
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ujian Selesai — Sistem Ujian Sekolah</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    fontFamily: { sans: ['Plus Jakarta Sans','ui-sans-serif','system-ui'] },
+    colors: { accent: { 300:'#5fe0c5', 500:'#0ea5a4', 600:'#0c8584' } }
+  }}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="api.js"></script>
+<script src="//unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<style>
+  body{font-family:'Plus Jakarta Sans',sans-serif;}
+  .glass{ background:rgba(255,255,255,.65); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid rgba(255,255,255,.45); }
+</style>
+</head>
+<body class="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10" x-data="selesai()" x-init="init()">
+
+  <div class="pointer-events-none fixed inset-0 overflow-hidden">
+    <div class="absolute -top-32 -left-24 w-96 h-96 bg-accent-300/25 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-32 -right-24 w-96 h-96 bg-accent-500/15 rounded-full blur-3xl"></div>
+  </div>
+
+  <template x-if="loading">
+    <i data-lucide="loader-2" class="w-6 h-6 text-accent-600 animate-spin relative"></i>
+  </template>
+
+  <div x-show="!loading" class="relative w-full max-w-md glass rounded-2xl shadow-lg shadow-slate-900/5 p-8 text-center space-y-6">
+    <div class="mx-auto w-20 h-20 rounded-full bg-accent-500/15 flex items-center justify-center">
+      <i data-lucide="party-popper" class="w-10 h-10 text-accent-600"></i>
+    </div>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Ujian Sudah Selesai!</h1>
+      <p class="text-slate-600 mt-1">Jawabanmu sudah tersimpan dan terkirim dengan aman.</p>
+      <p class="text-xs text-slate-400 mt-2">Dikirim pada <span x-text="waktuSubmit"></span></p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white/70 p-4 flex items-center justify-around">
+      <div><p class="text-2xl font-bold text-accent-600" x-text="dijawab"></p><p class="text-xs text-slate-500">Dijawab</p></div>
+      <div class="h-8 w-px bg-slate-200"></div>
+      <div><p class="text-2xl font-bold text-slate-800" x-text="total"></p><p class="text-xs text-slate-500">Total Soal</p></div>
+    </div>
+
+    <div class="rounded-xl p-4" :class="tampilkanNilai ? 'bg-accent-500/10 border border-accent-500/30' : 'bg-slate-100 border border-slate-200'">
+      <template x-if="tampilkanNilai">
+        <div><p class="text-sm text-slate-600 mb-1">Nilai kamu</p><p class="text-4xl font-extrabold text-accent-700" x-text="nilai"></p></div>
+      </template>
+      <template x-if="!tampilkanNilai">
+        <p class="text-sm text-slate-600 flex items-center justify-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i> Hasil akan diumumkan oleh guru</p>
+      </template>
+    </div>
+
+    <button @click="logout()" class="w-full h-12 rounded-xl bg-accent-500 hover:bg-accent-600 text-white font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-600 flex items-center justify-center gap-2">
+      <i data-lucide="log-out" class="w-4 h-4"></i> Keluar
+    </button>
+    <p class="text-xs text-slate-400">Terima kasih sudah mengerjakan dengan jujur ya!</p>
+  </div>
+
+<script>
+function selesai(){
+  return {
+    loading: true,
+    waktuSubmit: '', dijawab:0, total:0, tampilkanNilai:false, nilai:'-',
+    async init(){
+      lucide.createIcons();
+      const sess = DB.getSession();
+      if(!sess){ window.location.href = 'login-peserta.html'; return; }
+      try{
+        const hasil = await DB.getHasilById(sess.hasilId);
+        const sesi = await DB.getSesiById(sess.sesiId);
+        if(!hasil || !sesi){ window.location.href = 'login-peserta.html'; return; }
+        this.waktuSubmit = new Date(hasil.waktuSelesai || Date.now()).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' });
+        this.dijawab = Object.keys(hasil.jawaban).length;
+        this.total = (sesi.soalIds||[]).length;
+        this.tampilkanNilai = !!sesi.tampilkanNilai;
+        this.nilai = hasil.nilai ?? '-';
+      }catch(e){
+        window.location.href = 'login-peserta.html'; return;
+      }
+      this.loading = false;
+      this.$nextTick(()=>lucide.createIcons());
+    },
+    logout(){
+      DB.clearSession();
+      window.location.href = 'login-peserta.html';
+    }
+  }
+}
+</script>
+</body>
+</html>
