@@ -1,0 +1,16 @@
+{
+  "name": "sistem-ujian-sekolah",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "wrangler dev",
+    "db:migrate:local": "wrangler d1 execute ujian_sekolah_db --local --file=./schema.sql",
+    "db:seed:local": "wrangler d1 execute ujian_sekolah_db --local --file=./seed.sql",
+    "db:migrate:remote": "wrangler d1 execute ujian_sekolah_db --remote --file=./schema.sql",
+    "db:seed:remote": "wrangler d1 execute ujian_sekolah_db --remote --file=./seed.sql",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}
